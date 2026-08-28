@@ -1,80 +1,69 @@
 #!/usr/bin/env python3
-"""
-Rootrik Password Generator
-A simple, customizable password generator tool with terminal UI enhancements.
-"""
+"""Cryptographically secure command-line password generator."""
 
-import random
+from __future__ import annotations
+
+import argparse
+import secrets
 import string
-import os
-from colorama import Fore, Style, init
+from pathlib import Path
 
-# Initialize colorama
-init(autoreset=True)
+AMBIGUOUS = set("O0Il1|`'\"")
 
-def generate_password(length=12, use_numbers=True, use_specials=True):
-    """
-    Generate a random password based on given criteria.
 
-    Args:
-        length (int): Length of the password.
-        use_numbers (bool): Include digits if True.
-        use_specials (bool): Include special characters if True.
+def _clean(chars: str, exclude_ambiguous: bool) -> str:
+    return "".join(ch for ch in chars if ch not in AMBIGUOUS) if exclude_ambiguous else chars
 
-    Returns:
-        str: Generated password.
-    """
-    characters = list(string.ascii_letters)
 
+def generate_password(length: int = 16, use_numbers: bool = True, use_specials: bool = True, exclude_ambiguous: bool = False) -> str:
+    """Generate a password with at least one character from each selected group."""
+    groups = [_clean(string.ascii_letters, exclude_ambiguous)]
     if use_numbers:
-        characters += list(string.digits)
+        groups.append(_clean(string.digits, exclude_ambiguous))
     if use_specials:
-        characters += list(string.punctuation)
+        groups.append(_clean(string.punctuation, exclude_ambiguous))
+    if length < len(groups):
+        raise ValueError(f"Length must be at least {len(groups)} for the selected character groups")
+    password = [secrets.choice(group) for group in groups]
+    pool = "".join(groups)
+    password.extend(secrets.choice(pool) for _ in range(length - len(password)))
+    secrets.SystemRandom().shuffle(password)
+    return "".join(password)
 
-    if not characters:
-        raise ValueError("No characters available to generate password!")
 
-    return ''.join(random.choice(characters) for _ in range(length))
+def save_passwords(passwords: list[str], path: str) -> Path:
+    output = Path(path)
+    output.write_text("\n".join(passwords) + "\n", encoding="utf-8")
+    return output
 
-def save_password(password, filename="generated_passwords.txt"):
-    """
-    Save the generated password to a text file.
 
-    Args:
-        password (str): Password to save.
-        filename (str): File to save password into.
-    """
-    with open(filename, "a") as f:
-        f.write(password + "\n")
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Generate cryptographically secure passwords.")
+    parser.add_argument("-l", "--length", type=int, default=16, help="Password length (default: 16)")
+    parser.add_argument("-c", "--count", type=int, default=1, help="Number of passwords (default: 1)")
+    parser.add_argument("--no-numbers", action="store_true", help="Exclude digits")
+    parser.add_argument("--no-specials", action="store_true", help="Exclude punctuation")
+    parser.add_argument("--exclude-ambiguous", action="store_true", help="Avoid visually ambiguous characters")
+    parser.add_argument("--save", metavar="FILE", help="Optionally save passwords to a file")
+    return parser
 
-def main():
-    """
-    Main function to handle user input and generate passwords.
-    """
-    print(Fore.CYAN + "=== Rootrik Password Generator ===\n")
-    
+
+def main() -> int:
+    parser = build_parser()
+    args = parser.parse_args()
+    if args.length <= 0:
+        parser.error("Length must be greater than zero")
+    if args.count <= 0:
+        parser.error("Count must be greater than zero")
     try:
-        length = int(input(Fore.YELLOW + "Enter desired password length (default 12): ") or 12)
-        numbers = input(Fore.YELLOW + "Include numbers? (y/n) [default: y]: ").lower() or 'y'
-        specials = input(Fore.YELLOW + "Include special characters? (y/n) [default: y]: ").lower() or 'y'
-        quantity = int(input(Fore.YELLOW + "How many passwords to generate? (default 1): ") or 1)
+        passwords = [generate_password(args.length, not args.no_numbers, not args.no_specials, args.exclude_ambiguous) for _ in range(args.count)]
+    except ValueError as exc:
+        parser.error(str(exc))
+    print("\n".join(passwords))
+    if args.save:
+        print(f"Saved to {save_passwords(passwords, args.save).resolve()}")
+    return 0
 
-        use_numbers = numbers == 'y'
-        use_specials = specials == 'y'
-
-        passwords = [generate_password(length, use_numbers, use_specials) for _ in range(quantity)]
-
-        print(Fore.GREEN + "\nGenerated Password(s):")
-        for pwd in passwords:
-            print(Fore.WHITE + f" - {pwd}")
-            save_password(pwd)
-
-        print(Fore.GREEN + f"\nPasswords saved to {os.path.abspath('generated_passwords.txt')}")
-
-    except ValueError as ve:
-        print(Fore.RED + f"Error: {ve}")
-    except Exception as e:
-        print(Fore.RED + f"An unexpected error occurred: {e}")
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
