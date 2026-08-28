@@ -1,4 +1,4 @@
-# Rootrik Password Generator
+# Password Generator
 
 A compact Python CLI for generating passwords with the standard-library `secrets` module.
 
