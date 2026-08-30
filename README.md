@@ -2,7 +2,7 @@
 
 A compact Python CLI for generating passwords with the standard-library `secrets` module.
 
-[![CI](https://github.com/Blazebropwn/rootrik-password-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/Blazebropwn/rootrik-password-generator/actions/workflows/ci.yml)
+[![CI](https://github.com/Blazebropwn/password-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/Blazebropwn/password-generator/actions/workflows/ci.yml)
 
 ## Security choices
 
