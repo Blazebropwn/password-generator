@@ -1,5 +1,6 @@
 import string
 import stat
+import os
 
 import pytest
 
@@ -30,4 +31,5 @@ def test_rejects_length_shorter_than_selected_groups():
 def test_saved_password_file_is_private(tmp_path):
     output = save_passwords(["secret"], str(tmp_path / "passwords.txt"))
     assert output.read_text() == "secret\n"
-    assert stat.S_IMODE(output.stat().st_mode) == 0o600
+    if os.name != "nt":
+        assert stat.S_IMODE(output.stat().st_mode) == 0o600
