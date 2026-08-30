@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import secrets
 import string
 from pathlib import Path
@@ -33,7 +34,13 @@ def generate_password(length: int = 16, use_numbers: bool = True, use_specials: 
 
 def save_passwords(passwords: list[str], path: str) -> Path:
     output = Path(path)
-    output.write_text("\n".join(passwords) + "\n", encoding="utf-8")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = os.open(output, flags, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+        handle.write("\n".join(passwords) + "\n")
+    os.chmod(output, 0o600)
     return output
 
 
